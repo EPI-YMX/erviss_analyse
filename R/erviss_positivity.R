@@ -1,28 +1,9 @@
 #' @noRd
-yearweek_to_date <- function(yearweek) {
-  # Parse the yearweek string (e.g., "2020-W03")
-  year <- as.numeric(substr(yearweek, 1, 4))
-  week <- as.numeric(substr(yearweek, 7, 8))
-
-  # Create a date string for January 4th of the year (always in week 1)
-  jan4 <- as.Date(paste0(year, "-01-04"))
-
-  # Find the Monday of week 1
-  days_to_monday <- (as.numeric(format(jan4, "%u")) - 1) %% 7
-  monday_week1 <- jan4 - days_to_monday
-
-  # Calculate the Monday of the target week
-  target_monday <- monday_week1 + (week - 1) * 7
-
-  return(target_monday)
-}
-
-#' @noRd
-clean_erviss_for_a_given_period <- function(
+clean_erviss_positivity_for_a_given_period <- function(
   csv_variants_file,
   date_min,
   date_max,
-  variant_to_study = "",
+  pathogen_to_study = "",
   studysites_variants = ""
 ) {
   csv_variants <- readr::read_csv(
@@ -32,10 +13,10 @@ clean_erviss_for_a_given_period <- function(
       date = yearweek_to_date(yearweek)
     )
 
-  if (any(variant_to_study != "")) {
+  if (any(pathogen_to_study != "")) {
     csv_variants <- csv_variants %>%
       dplyr::filter(
-        variant %in% variant_to_study
+        pathogen %in% pathogen_to_study
       )
   }
 
@@ -51,22 +32,23 @@ clean_erviss_for_a_given_period <- function(
       date >= date_min & date <= date_max
     ) %>%
     dplyr::filter(
-      indicator == "proportion"
+      indicator == "positivity"
     )
 
   return(csv_variants_filtered)
 }
 
 #' @noRd
-plot_erviss_for_a_given_period <- function(csv_variants_filtered) {
-  ggplot(csv_variants_filtered, aes(x = date, y = value, color = variant)) +
+plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
+  mean_positivity <- mean(csv_variants_filtered$value)
+  ggplot(csv_variants_filtered, aes(x = date, y = value, color = pathogen)) +
     geom_line() +
     xlab("") +
-    ylab("% of all variants") +
+    ylab("Positivity") +
     facet_wrap(~countryname, scales = "free_x", ncol = 3) +
     theme_minimal() +
     scale_x_date(date_breaks = "2 weeks") +
-    scale_colour_viridis_d(name = "Variant") +
+    scale_colour_viridis_d(name = "Pathogen") +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.5),
       strip.placement = "outside",
@@ -77,7 +59,8 @@ plot_erviss_for_a_given_period <- function(csv_variants_filtered) {
       legend.text = element_text(size = 12),
       legend.title = element_text(size = 14),
       strip.text = element_text(size = 14)
-    )
+    ) +
+    labs(title = paste0("Mean positivity: ", mean_positivity))
 }
 
 #' @title Show variants for a given period
@@ -92,21 +75,22 @@ plot_erviss_for_a_given_period <- function(csv_variants_filtered) {
 #' @import readr
 #' @return A plot of the variants
 #' @export
-show_variants_for_a_given_period <- function(
+show_positivity_for_a_given_period <- function(
   csv_variants_file,
   date_min,
   date_max,
-  variant_to_study = "",
+  pathogen_to_study = "",
   studysites_variants = ""
 ) {
-  csv_variants_filtered <- clean_erviss_for_a_given_period(
+  csv_variants_filtered <- clean_erviss_positivity_for_a_given_period(
     csv_variants_file,
     date_min,
     date_max,
-    variant_to_study,
+    pathogen_to_study,
     studysites_variants
   )
-  plot_erviss_for_a_given_period(csv_variants_filtered)
+  
+  plot_erviss_positivity_for_a_given_period(csv_variants_filtered)
 }
 
 # library(dplyr)
