@@ -1,6 +1,6 @@
 # ervissanalyse
 
-An R package to analyze ERVISS (European Respiratory Virus Surveillance Summary) data, providing tools for visualizing COVID-19 positivity rates and variant proportions across European countries.
+An R package to easily retrieve ERVISS (European Respiratory Virus Surveillance Summary) data from the EU-ECDC. Provides functions to fetch, filter, and optionally visualize respiratory virus positivity rates and SARS-CoV-2 variant proportions across European countries.
 
 ## Installation
 
@@ -11,29 +11,33 @@ devtools::install_local("path/to/ervissanalyse")
 # Or load for development
 devtools::load_all()
 ```
+
 ## Quick Start
 
 ```r
 library(ervissanalyse)
 
-# Plot positivity rates using the latest data
-show_positivity_for_a_given_period(
+# Retrieve SARS-CoV-2 positivity data
+positivity_data <- get_erviss_positivity(
  date_min = as.Date("2024-01-01"),
-  date_max = as.Date("2024-12-31"),
-  pathogen_to_study = "SARS-CoV-2",
-  countries = c("France", "Germany", "Italy")
+ date_max = as.Date("2024-12-31"),
+ pathogen = "SARS-CoV-2",
+ countries = c("France", "Germany", "Italy")
 )
 
-# Plot variant proportions
-show_variants_for_a_given_period(
-  date_min = as.Date("2024-01-01"),
+# Retrieve variant data
+variant_data <- get_erviss_variants(
+  date_min = as.Date("2024-06-01"),
   date_max = as.Date("2024-12-31"),
-  variant_to_study = c("XFG", "LP.8.1"),
-  date_breaks = "1 month"
+  variant = c("XFG", "LP.8.1")
 )
+
+# The data is ready for your own analysis
+head(positivity_data)
+summary(variant_data)
 ```
 
-## Data Sources
+## Data Source
 
 The package fetches data directly from the [EU-ECDC Respiratory Viruses Weekly Data](https://github.com/EU-ECDC/Respiratory_viruses_weekly_data) repository.
 
@@ -41,13 +45,13 @@ Two data types are available:
 - **Positivity**: Test positivity rates by pathogen and country
 - **Variants**: SARS-CoV-2 variant proportions by country
 
-### Using Latest Data vs Snapshots
+### Latest Data vs Snapshots
 
-By default, functions use the latest available data:
+By default, functions fetch the latest available data:
 
 ```r
 # Latest data (default)
-show_positivity_for_a_given_period(
+data <- get_erviss_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-12-31")
 )
@@ -56,37 +60,32 @@ show_positivity_for_a_given_period(
 For reproducibility, you can use historical snapshots:
 
 ```r
-# Use a specific snapshot
-show_positivity_for_a_given_period(
+# Use a specific snapshot for reproducible analyses
+data <- get_erviss_positivity(
   date_min = as.Date("2023-01-01"),
   date_max = as.Date("2023-12-31"),
   use_snapshot = TRUE,
-  snapshot_date = as.Date("2023-11-24")
+  snapshot_date = as.Date("2024-02-23")
 )
 ```
 
 ## Main Functions
 
-### High-level functions (clean + plot)
+### Data retrieval
 
 | Function | Description |
 |----------|-------------|
-| `show_positivity_for_a_given_period()` | Display positivity rates plot |
-| `show_variants_for_a_given_period()` | Display variant proportions plot |
+| `get_erviss_positivity()` | Fetch and filter positivity data |
+| `get_erviss_variants()` | Fetch and filter variant data |
 
-### Data cleaning functions
-
-| Function | Description |
-|----------|-------------|
-| `clean_erviss_positivity_for_a_given_period()` | Clean and filter positivity data |
-| `clean_erviss_variants_for_a_given_period()` | Clean and filter variant data |
-
-### Plotting functions
+### Visualization (optional)
 
 | Function | Description |
 |----------|-------------|
-| `plot_erviss_positivity_for_a_given_period()` | Plot cleaned positivity data |
-| `plot_erviss_variants_for_a_given_period()` | Plot cleaned variant data |
+| `plot_erviss_positivity()` | Plot positivity data |
+| `plot_erviss_variants()` | Plot variant data |
+| `quick_plot_erviss_positivity()` | Fetch + plot positivity in one call |
+| `quick_plot_erviss_variants()` | Fetch + plot variants in one call |
 
 ### URL builders
 
@@ -97,37 +96,61 @@ show_positivity_for_a_given_period(
 
 ## Examples
 
-### Custom workflow (clean then plot)
+### Retrieve and analyze data
 
 ```r
-# Step 1: Clean the data
-data <- clean_erviss_positivity_for_a_given_period(
+library(dplyr)
+
+# Get positivity data
+data <- get_erviss_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-06-30"),
-  pathogen_to_study = c("SARS-CoV-2", "Influenza"),
+  pathogen = c("SARS-CoV-2", "Influenza"),
   countries = c("France", "Spain", "Italy")
 )
 
-# Step 2: Inspect or modify the data
-head(data)
-nrow(data)
+# Your own analysis
+data %>%
+  group_by(countryname, pathogen) %>%
+  summarise(
+    mean_positivity = mean(value, na.rm = TRUE),
+    max_positivity = max(value, na.rm = TRUE)
+  )
+```
 
-# Step 3: Plot
-plot_erviss_positivity_for_a_given_period(data)
+### Visualization
+
+```r
+# Option 1: Separate steps (more control)
+data <- get_erviss_positivity(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-06-30"),
+  pathogen = "SARS-CoV-2"
+)
+plot_erviss_positivity(data, date_breaks = "1 month")
+
+# Option 2: Quick one-liner
+quick_plot_erviss_positivity(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-12-31"),
+  pathogen = "SARS-CoV-2",
+  date_breaks = "1 month"
+)
 ```
 
 ### Using a local CSV file
 
 ```r
-show_variants_for_a_given_period(
+# If you have downloaded the data locally
+data <- get_erviss_variants(
   csv_file = "path/to/local/variants.csv",
   date_min = as.Date("2024-01-01"),
-  date_max = as.Date("2024-12-31"),
-  date_breaks = "2 weeks"
+  date_max = as.Date("2024-12-31")
 )
 ```
 
 ## Dependencies
+
 - dplyr
 - ggplot2
 - readr

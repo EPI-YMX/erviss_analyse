@@ -1,20 +1,20 @@
-#' Clean ERVISS variants data for a given period
+#' Get ERVISS variants data
 #'
-#' Filters and cleans variant data from an ERVISS CSV file for a specified
-#' date range, variant(s), study site(s), and indicator type.
+#' Retrieves and filters SARS-CoV-2 variant data from the ERVISS (European Respiratory
+#' Virus Surveillance Summary) for a specified date range, variant(s), and country(ies).
 #'
-#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
-#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
+#' @param csv_file Path to a local CSV file or URL containing the ERVISS data.
+#'   If NULL (default), data is fetched from the official ERVISS repository.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
-#' @param variant_to_study Character vector of variant names to filter.
+#' @param variant Character vector of variant names to filter.
 #'   Use "" (default) to include all variants.
 #' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
-#' @param minimal_value Minimum value threshold to include in the results (default: 0)
-#' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
-#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
-#'   uses the latest data. Ignored if csv_file is provided.
+#' @param min_value Minimum value threshold to include in the results (default: 0)
+#' @param indicator Type of indicator: "proportion" (default) or "detections"
+#' @param use_snapshot Logical. If TRUE, fetches a historical snapshot; if FALSE (default),
+#'   fetches the latest data. Ignored if csv_file is provided.
 #' @param snapshot_date Date of the snapshot to retrieve.
 #'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
@@ -22,14 +22,31 @@
 #'   date, value, variant, countryname, indicator, and other ERVISS fields.
 #'
 #' @export
-clean_erviss_variants_for_a_given_period <- function(
+#' @examples
+#' \dontrun{
+#' # Get latest variant data for France
+#' data <- get_erviss_variants(
+#'   date_min = as.Date("2024-01-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   countries = "France"
+#' )
+#'
+#' # Get specific variants with minimum proportion threshold
+#' data <- get_erviss_variants(
+#'   date_min = as.Date("2024-06-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   variant = c("XFG", "LP.8.1"),
+#'   min_value = 5
+#' )
+#' }
+get_erviss_variants <- function(
   csv_file = NULL,
   date_min,
   date_max,
-  variant_to_study = "",
+  variant = "",
   countries = "",
-  minimal_value = 0,
-  indicator_to_study = "proportion",
+  min_value = 0,
+  indicator = "proportion",
   use_snapshot = FALSE,
   snapshot_date = NULL
 ) {
@@ -40,39 +57,25 @@ clean_erviss_variants_for_a_given_period <- function(
   assert_date(date_min, "date_min")
   assert_date(date_max, "date_max")
 
-  match.arg(indicator_to_study, c("proportion", "detections"))
-  csv_variants <- readr::read_csv(
-    csv_file
-  ) %>%
-    dplyr::mutate(
-      date = yearweek_to_date(yearweek)
-    )
+  match.arg(indicator, c("proportion", "detections"))
 
-  if (any(variant_to_study != "")) {
-    csv_variants <- csv_variants %>%
-      dplyr::filter(
-        variant %in% variant_to_study
-      )
+  data <- readr::read_csv(csv_file) %>%
+    dplyr::mutate(date = yearweek_to_date(yearweek))
+
+  if (any(variant != "")) {
+    data <- data %>%
+      dplyr::filter(variant %in% .env$variant)
   }
 
   if (any(countries != "")) {
-    csv_variants <- csv_variants %>%
-      dplyr::filter(
-        countryname %in% countries
-      )
+    data <- data %>%
+      dplyr::filter(countryname %in% countries)
   }
-  csv_variants_filtered <- csv_variants %>%
-    dplyr::filter(
-      date >= date_min & date <= date_max
-    ) %>%
-    dplyr::filter(
-      indicator == indicator_to_study
-    ) %>%
-    dplyr::filter(
-      value >= minimal_value
-    )
 
-  return(csv_variants_filtered)
+  data %>%
+    dplyr::filter(date >= date_min & date <= date_max) %>%
+    dplyr::filter(indicator == .env$indicator) %>%
+    dplyr::filter(value >= min_value)
 }
 
 #' Plot ERVISS variants data
@@ -80,9 +83,9 @@ clean_erviss_variants_for_a_given_period <- function(
 #' Creates a ggplot2 visualization of variant data, with facets by country
 #' and colored by variant. The y-axis shows percentage of all variants.
 #'
-#' @param csv_variants_filtered A data frame containing cleaned variant data,
-#'   typically output from \code{\link{clean_erviss_variants_for_a_given_period}}.
-#'   Must contain columns: date, value, variant, countryname.
+#' @param data A data frame containing variant data, typically output from
+#'   \code{\link{get_erviss_variants}}. Must contain columns: date, value,
+#'   variant, countryname.
 #' @param date_breaks A string specifying the date breaks for the x-axis
 #'   (e.g., "1 month", "2 weeks")
 #' @param date_format A string specifying the date format for x-axis labels
@@ -91,12 +94,21 @@ clean_erviss_variants_for_a_given_period <- function(
 #' @return A ggplot2 object
 #'
 #' @export
-plot_erviss_variants_for_a_given_period <- function(
-  csv_variants_filtered,
-  date_breaks,
-  date_format
+#' @examples
+#' \dontrun{
+#' data <- get_erviss_variants(
+#'   date_min = as.Date("2024-06-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   variant = c("XFG", "LP.8.1")
+#' )
+#' plot_erviss_variants(data, date_breaks = "1 month")
+#' }
+plot_erviss_variants <- function(
+  data,
+  date_breaks = "1 month",
+  date_format = "%b %Y"
 ) {
-  ggplot(csv_variants_filtered, aes(x = date, y = value, color = variant)) +
+  ggplot(data, aes(x = date, y = value, color = variant)) +
     geom_line() +
     xlab("") +
     ylab("% of all variants") +
@@ -119,31 +131,14 @@ plot_erviss_variants_for_a_given_period <- function(
     )
 }
 
-#' Show variants for a given period
+#' Quick plot of ERVISS variants data
 #'
-#' Cleans and plots ERVISS variant data for a specified period.
-#' This is a convenience function that combines
-#' \code{\link{clean_erviss_variants_for_a_given_period}} and
-#' \code{\link{plot_erviss_variants_for_a_given_period}}.
+#' Convenience function that fetches and plots ERVISS variant data in one step.
+#' For more control, use \code{\link{get_erviss_variants}} followed by
+#' \code{\link{plot_erviss_variants}}.
 #'
-#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
-#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
-#' @param date_min Start date of the period (Date object)
-#' @param date_max End date of the period (Date object)
-#' @param variant_to_study Character vector of variant names to filter.
-#'   Use "" (default) to include all variants.
-#' @param countries Character vector of country names to filter.
-#'   Use "" (default) to include all countries.
-#' @param minimal_value Minimum value threshold to include in the results (default: 0)
-#' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
-#' @param date_breaks A string specifying the date breaks for the x-axis
-#'   (e.g., "1 month", "2 weeks")
-#' @param date_format A string specifying the date format for x-axis labels
-#'   (e.g., `"%b %Y"` for "Jan 2024")
-#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
-#'   uses the latest data. Ignored if csv_file is provided.
-#' @param snapshot_date Date of the snapshot to retrieve.
-#'   Required if use_snapshot = TRUE and csv_file is NULL.
+#' @inheritParams get_erviss_variants
+#' @inheritParams plot_erviss_variants
 #'
 #' @return A ggplot2 object showing variant proportions over time by country
 #'
@@ -153,50 +148,38 @@ plot_erviss_variants_for_a_given_period <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' # Using latest data
-#' show_variants_for_a_given_period(
-#'   date_min = as.Date("2024-10-01"),
-#'   date_max = as.Date("2025-09-30"),
-#'   variant_to_study = c("XFG", "LP.8.1"),
-#'   date_breaks = "1 month"
-#' )
-#'
-#' # Using a snapshot
-#' show_variants_for_a_given_period(
-#'   date_min = as.Date("2024-10-01"),
-#'   date_max = as.Date("2025-09-30"),
-#'   use_snapshot = TRUE,
-#'   snapshot_date = as.Date("2025-11-21"),
+#' # Quick visualization of latest variant data
+#' quick_plot_erviss_variants(
+#'   date_min = as.Date("2024-06-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   variant = c("XFG", "LP.8.1"),
 #'   date_breaks = "1 month"
 #' )
 #' }
-show_variants_for_a_given_period <- function(
+quick_plot_erviss_variants <- function(
   csv_file = NULL,
   date_min,
   date_max,
-  variant_to_study = "",
+  variant = "",
   countries = "",
-  minimal_value = 0,
-  indicator_to_study = "proportion",
-  date_breaks,
+  min_value = 0,
+  indicator = "proportion",
+  date_breaks = "1 month",
   date_format = "%b %Y",
   use_snapshot = FALSE,
   snapshot_date = NULL
 ) {
-  csv_variants_filtered <- clean_erviss_variants_for_a_given_period(
+  data <- get_erviss_variants(
     csv_file,
     date_min,
     date_max,
-    variant_to_study,
+    variant,
     countries,
-    minimal_value,
-    indicator_to_study,
+    min_value,
+    indicator,
     use_snapshot,
     snapshot_date
   )
-  plot_erviss_variants_for_a_given_period(
-    csv_variants_filtered,
-    date_breaks,
-    date_format
-  )
+
+  plot_erviss_variants(data, date_breaks, date_format)
 }

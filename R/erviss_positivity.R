@@ -1,18 +1,18 @@
-#' Clean ERVISS positivity data for a given period
+#' Get ERVISS positivity data
 #'
-#' Filters and cleans positivity data from an ERVISS CSV file for a specified
-#' date range, pathogen(s), and study site(s).
+#' Retrieves and filters positivity data from the ERVISS (European Respiratory
+#' Virus Surveillance Summary) for a specified date range, pathogen(s), and country(ies).
 #'
-#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
-#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
+#' @param csv_file Path to a local CSV file or URL containing the ERVISS data.
+#'   If NULL (default), data is fetched from the official ERVISS repository.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
-#' @param pathogen_to_study Character vector of pathogen names to filter.
+#' @param pathogen Character vector of pathogen names to filter.
 #'   Use "" (default) to include all pathogens.
 #' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
-#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
-#'   uses the latest data. Ignored if csv_file is provided.
+#' @param use_snapshot Logical. If TRUE, fetches a historical snapshot; if FALSE (default),
+#'   fetches the latest data. Ignored if csv_file is provided.
 #' @param snapshot_date Date of the snapshot to retrieve.
 #'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
@@ -20,11 +20,29 @@
 #'   date, value, pathogen, countryname, and other ERVISS fields.
 #'
 #' @export
-clean_erviss_positivity_for_a_given_period <- function(
+#' @examples
+#' \dontrun{
+#' # Get latest SARS-CoV-2 positivity data for France
+#' data <- get_erviss_positivity(
+#'   date_min = as.Date("2024-01-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   pathogen = "SARS-CoV-2",
+#'   countries = "France"
+#' )
+#'
+#' # Get historical data from a specific snapshot
+#' data <- get_erviss_positivity(
+#'   date_min = as.Date("2023-01-01"),
+#'   date_max = as.Date("2023-12-31"),
+#'   use_snapshot = TRUE,
+#'   snapshot_date = as.Date("2024-02-23")
+#' )
+#' }
+get_erviss_positivity <- function(
   csv_file = NULL,
   date_min,
   date_max,
-  pathogen_to_study = "",
+  pathogen = "",
   countries = "",
   use_snapshot = FALSE,
   snapshot_date = NULL
@@ -36,36 +54,22 @@ clean_erviss_positivity_for_a_given_period <- function(
   assert_date(date_min, "date_min")
   assert_date(date_max, "date_max")
 
-  csv_variants <- readr::read_csv(
-    csv_file
-  ) %>%
-    dplyr::mutate(
-      date = yearweek_to_date(yearweek)
-    )
+  data <- readr::read_csv(csv_file) %>%
+    dplyr::mutate(date = yearweek_to_date(yearweek))
 
-  if (any(pathogen_to_study != "")) {
-    csv_variants <- csv_variants %>%
-      dplyr::filter(
-        pathogen %in% pathogen_to_study
-      )
+  if (any(pathogen != "")) {
+    data <- data %>%
+      dplyr::filter(pathogen %in% .env$pathogen)
   }
 
   if (any(countries != "")) {
-    csv_variants <- csv_variants %>%
-      dplyr::filter(
-        countryname %in% countries
-      )
+    data <- data %>%
+      dplyr::filter(countryname %in% countries)
   }
 
-  csv_variants_filtered <- csv_variants %>%
-    dplyr::filter(
-      date >= date_min & date <= date_max
-    ) %>%
-    dplyr::filter(
-      indicator == "positivity"
-    )
-
-  return(csv_variants_filtered)
+  data %>%
+    dplyr::filter(date >= date_min & date <= date_max) %>%
+    dplyr::filter(indicator == "positivity")
 }
 
 #' Plot ERVISS positivity data
@@ -73,24 +77,42 @@ clean_erviss_positivity_for_a_given_period <- function(
 #' Creates a ggplot2 visualization of positivity data, with facets by country
 #' and colored by pathogen. The plot title displays mean, min and max positivity values.
 #'
-#' @param csv_variants_filtered A data frame containing cleaned positivity data,
-#'   typically output from \code{\link{clean_erviss_positivity_for_a_given_period}}.
-#'   Must contain columns: date, value, pathogen, countryname.
+#' @param data A data frame containing positivity data, typically output from
+#'   \code{\link{get_erviss_positivity}}. Must contain columns: date, value,
+#'   pathogen, countryname.
+#' @param date_breaks A string specifying the date breaks for the x-axis
+#'   (e.g., "1 month", "2 weeks")
+#' @param date_format A string specifying the date format for x-axis labels
+#'   (e.g., `"%b %Y"` for "Jan 2024")
 #'
 #' @return A ggplot2 object
 #'
 #' @export
-plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
-  mean_positivity <- mean(csv_variants_filtered$value)
-  min_positivity <- min(csv_variants_filtered$value)
-  max_positivity <- max(csv_variants_filtered$value)
-  ggplot(csv_variants_filtered, aes(x = date, y = value, color = pathogen)) +
+#' @examples
+#' \dontrun{
+#' data <- get_erviss_positivity(
+#'   date_min = as.Date("2024-01-01"),
+#'   date_max = as.Date("2024-06-30"),
+#'   pathogen = "SARS-CoV-2"
+#' )
+#' plot_erviss_positivity(data, date_breaks = "1 month")
+#' }
+plot_erviss_positivity <- function(
+  data,
+  date_breaks = "2 weeks",
+  date_format = "%b %Y"
+) {
+  mean_positivity <- mean(data$value)
+  min_positivity <- min(data$value)
+  max_positivity <- max(data$value)
+
+  ggplot(data, aes(x = date, y = value, color = pathogen)) +
     geom_line() +
     xlab("") +
     ylab("Positivity") +
     facet_wrap(~countryname, scales = "free_x", ncol = 3) +
     theme_minimal() +
-    scale_x_date(date_breaks = "2 weeks") +
+    scale_x_date(date_breaks = date_breaks, date_labels = date_format) +
     scale_colour_viridis_d(name = "Pathogen") +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.5),
@@ -116,25 +138,14 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
     )
 }
 
-#' Show positivity for a given period
+#' Quick plot of ERVISS positivity data
 #'
-#' Cleans and plots ERVISS positivity data for a specified period.
-#' This is a convenience function that combines
-#' \code{\link{clean_erviss_positivity_for_a_given_period}} and
-#' \code{\link{plot_erviss_positivity_for_a_given_period}}.
+#' Convenience function that fetches and plots ERVISS positivity data in one step.
+#' For more control, use \code{\link{get_erviss_positivity}} followed by
+#' \code{\link{plot_erviss_positivity}}.
 #'
-#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
-#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
-#' @param date_min Start date of the period (Date object)
-#' @param date_max End date of the period (Date object)
-#' @param pathogen_to_study Character vector of pathogen names to filter.
-#'   Use "" (default) to include all pathogens.
-#' @param countries Character vector of country names to filter.
-#'   Use "" (default) to include all countries.
-#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
-#'   uses the latest data. Ignored if csv_file is provided.
-#' @param snapshot_date Date of the snapshot to retrieve.
-#'   Required if use_snapshot = TRUE and csv_file is NULL.
+#' @inheritParams get_erviss_positivity
+#' @inheritParams plot_erviss_positivity
 #'
 #' @return A ggplot2 object showing positivity over time by country and pathogen
 #'
@@ -144,39 +155,34 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
 #' @export
 #' @examples
 #' \dontrun{
-#' # Using latest data
-#' show_positivity_for_a_given_period(
+#' # Quick visualization of latest data
+#' quick_plot_erviss_positivity(
 #'   date_min = as.Date("2024-01-01"),
 #'   date_max = as.Date("2024-12-31"),
-#'   pathogen_to_study = "SARS-CoV-2"
-#' )
-#'
-#' # Using a snapshot
-#' show_positivity_for_a_given_period(
-#'   date_min = as.Date("2023-01-01"),
-#'   date_max = as.Date("2023-12-31"),
-#'   use_snapshot = TRUE,
-#'   snapshot_date = as.Date("2023-11-24")
+#'   pathogen = "SARS-CoV-2",
+#'   date_breaks = "1 month"
 #' )
 #' }
-show_positivity_for_a_given_period <- function(
+quick_plot_erviss_positivity <- function(
   csv_file = NULL,
   date_min,
   date_max,
-  pathogen_to_study = "",
+  pathogen = "",
   countries = "",
+  date_breaks = "2 weeks",
+  date_format = "%b %Y",
   use_snapshot = FALSE,
   snapshot_date = NULL
 ) {
-  csv_variants_filtered <- clean_erviss_positivity_for_a_given_period(
+  data <- get_erviss_positivity(
     csv_file,
     date_min,
     date_max,
-    pathogen_to_study,
+    pathogen,
     countries,
     use_snapshot,
     snapshot_date
   )
 
-  plot_erviss_positivity_for_a_given_period(csv_variants_filtered)
+  plot_erviss_positivity(data, date_breaks, date_format)
 }
