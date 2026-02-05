@@ -41,6 +41,8 @@ clean_erviss_positivity_for_a_given_period <- function(
 #' @noRd
 plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
   mean_positivity <- mean(csv_variants_filtered$value)
+  min_positivity <- min(csv_variants_filtered$value)
+  max_positivity <- max(csv_variants_filtered$value)
   ggplot(csv_variants_filtered, aes(x = date, y = value, color = pathogen)) +
     geom_line() +
     xlab("") +
@@ -60,7 +62,7 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
       legend.title = element_text(size = 14),
       strip.text = element_text(size = 14)
     ) +
-    labs(title = paste0("Mean positivity: ", mean_positivity))
+    labs(title = paste0("Mean positivity: ", mean_positivity, " (", min_positivity, " - ", max_positivity, ")"))
 }
 
 #' @title Show variants for a given period
