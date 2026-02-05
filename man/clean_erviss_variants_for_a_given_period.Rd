@@ -2,7 +2,7 @@
 % Please edit documentation in R/erviss_variants.R
 \name{clean_erviss_variants_for_a_given_period}
 \alias{clean_erviss_variants_for_a_given_period}
-\title{Clean the variants data for a given period}
+\title{Clean ERVISS variants data for a given period}
 \usage{
 clean_erviss_variants_for_a_given_period(
   csv_variants_file,
@@ -15,24 +15,27 @@ clean_erviss_variants_for_a_given_period(
 )
 }
 \arguments{
-\item{csv_variants_file}{The path to the CSV file containing the variants data}
+\item{csv_variants_file}{Path to the CSV file or URL containing the ERVISS data}
 
-\item{date_min}{The minimum date to show}
+\item{date_min}{Start date of the period (Date object)}
 
-\item{date_max}{The maximum date to show}
+\item{date_max}{End date of the period (Date object)}
 
-\item{variant_to_study}{The variants to study}
+\item{variant_to_study}{Character vector of variant names to filter.
+Use "" (default) to include all variants.}
 
-\item{studysites_variants}{The studysites to study}
+\item{studysites_variants}{Character vector of country names to filter.
+Use "" (default) to include all countries.}
 
-\item{minimal_value}{The minimal value to show}
+\item{minimal_value}{Minimum value threshold to include in the results (default: 0)}
 
-\item{indicator_to_study}{The indicator to study}
+\item{indicator_to_study}{Type of indicator: "proportion" (default) or "detections"}
 }
 \value{
-A data frame containing the variants data
-#' @export
+A data frame containing the filtered variant data with columns:
+date, value, variant, countryname, indicator, and other ERVISS fields.
 }
 \description{
-Clean the variants data for a given period
+Filters and cleans variant data from an ERVISS CSV file for a specified
+date range, variant(s), study site(s), and indicator type.
 }

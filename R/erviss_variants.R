@@ -1,14 +1,22 @@
-#' @title Clean the variants data for a given period
-#' @description Clean the variants data for a given period
-#' @param csv_variants_file The path to the CSV file containing the variants data
-#' @param date_min The minimum date to show
-#' @param date_max The maximum date to show
-#' @param variant_to_study The variants to study
-#' @param studysites_variants The studysites to study
-#' @param minimal_value The minimal value to show
-#' @param indicator_to_study The indicator to study
-#' @return A data frame containing the variants data
-#' #' @export
+#' Clean ERVISS variants data for a given period
+#'
+#' Filters and cleans variant data from an ERVISS CSV file for a specified
+#' date range, variant(s), study site(s), and indicator type.
+#'
+#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param date_min Start date of the period (Date object)
+#' @param date_max End date of the period (Date object)
+#' @param variant_to_study Character vector of variant names to filter.
+#'   Use "" (default) to include all variants.
+#' @param studysites_variants Character vector of country names to filter.
+#'   Use "" (default) to include all countries.
+#' @param minimal_value Minimum value threshold to include in the results (default: 0)
+#' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
+#'
+#' @return A data frame containing the filtered variant data with columns:
+#'   date, value, variant, countryname, indicator, and other ERVISS fields.
+#'
+#' @export
 clean_erviss_variants_for_a_given_period <- function(
   csv_variants_file,
   date_min,
@@ -18,6 +26,10 @@ clean_erviss_variants_for_a_given_period <- function(
   minimal_value = 0,
   indicator_to_study = "proportion"
 ) {
+  assert_file_or_url(csv_variants_file, "csv_variants_file")
+  assert_date(date_min, "date_min")
+  assert_date(date_max, "date_max")
+
   match.arg(indicator_to_study, c("proportion", "detections"))
   csv_variants <- readr::read_csv(
     csv_variants_file
@@ -53,7 +65,22 @@ clean_erviss_variants_for_a_given_period <- function(
   return(csv_variants_filtered)
 }
 
-#' @noRd
+#' Plot ERVISS variants data
+#'
+#' Creates a ggplot2 visualization of variant data, with facets by country
+#' and colored by variant. The y-axis shows percentage of all variants.
+#'
+#' @param csv_variants_filtered A data frame containing cleaned variant data,
+#'   typically output from \code{\link{clean_erviss_variants_for_a_given_period}}.
+#'   Must contain columns: date, value, variant, countryname.
+#' @param date_breaks A string specifying the date breaks for the x-axis
+#'   (e.g., "1 month", "2 weeks")
+#' @param date_format A string specifying the date format for x-axis labels
+#'   (e.g., `"%b %Y"` for "Jan 2024")
+#'
+#' @return A ggplot2 object
+#'
+#' @export
 plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_breaks, date_format) {
   ggplot(csv_variants_filtered, aes(x = date, y = value, color = variant)) +
     geom_line() +
@@ -78,33 +105,46 @@ plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_
     )
 }
 
-#' @title Show variants for a given period
-#' @description Show variants for a given period
-#' @param csv_variants_file The path to the CSV file containing the variants data
-#' @param date_min The minimum date to show
-#' @param date_max The maximum date to show
-#' @param variant_to_study The variants to study
-#' @param studysites_variants The studysites to study
-#' @param minimal_value The minimal value to show
-#' @param indicator_to_study The indicator to study
-#' @param date_breaks The breaks for the x-axis
-#' @param date_format The format for the x-axis
+#' Show variants for a given period
+#'
+#' Cleans and plots ERVISS variant data for a specified period.
+#' This is a convenience function that combines
+#' \code{\link{clean_erviss_variants_for_a_given_period}} and
+#' \code{\link{plot_erviss_variants_for_a_given_period}}.
+#'
+#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param date_min Start date of the period (Date object)
+#' @param date_max End date of the period (Date object)
+#' @param variant_to_study Character vector of variant names to filter.
+#'   Use "" (default) to include all variants.
+#' @param studysites_variants Character vector of country names to filter.
+#'   Use "" (default) to include all countries.
+#' @param minimal_value Minimum value threshold to include in the results (default: 0)
+#' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
+#' @param date_breaks A string specifying the date breaks for the x-axis
+#'   (e.g., "1 month", "2 weeks")
+#' @param date_format A string specifying the date format for x-axis labels
+#'   (e.g., `"%b %Y"` for "Jan 2024")
+#'
+#' @return A ggplot2 object showing variant proportions over time by country
+#'
 #' @import ggplot2
 #' @import dplyr
 #' @import readr
-#' @return A plot of the variants
 #' @export
 #' @examples
+#' \dontrun{
 #' show_variants_for_a_given_period(
 #'   csv_variants_file = "https://raw.githubusercontent.com/EU-ECDC/Respiratory_viruses_weekly_data/refs/heads/main/data/snapshots/2025-11-21_variants.csv",
 #'   date_min = as.Date("2024-10-01"),
 #'   date_max = as.Date("2025-09-30"),
 #'   variant_to_study = c("XFG", "LP.8.1", "BA.2.86"),
 #'   minimal_value = 10,
-#'   studysites_variants =  c("Belgium", "Denmark", "Italy", "Norway", "Portugal", "Spain", "Sweden"),
-#'   date_breaks = "1 month", 
-#'   date_labels = "%b %Y"
+#'   studysites_variants = c("Belgium", "Denmark", "Italy", "Norway", "Portugal", "Spain", "Sweden"),
+#'   date_breaks = "1 month",
+#'   date_format = "%b %Y"
 #' )
+#' }
 show_variants_for_a_given_period <- function(
   csv_variants_file,
   date_min,

@@ -1,4 +1,18 @@
 #' @noRd
+assert_file_or_url <- function(path, arg_name = "csv_file") {
+  if (!file.exists(path) && !grepl("^https?://", path)) {
+    stop(sprintf("'%s' must be an existing file or a valid URL", arg_name))
+  }
+}
+
+#' @noRd
+assert_date <- function(x, arg_name) {
+  if (!inherits(x, "Date")) {
+    stop(sprintf("'%s' must be a Date object (use as.Date())", arg_name))
+  }
+}
+
+#' @noRd
 yearweek_to_date <- function(yearweek) {
   # Parse the yearweek string (e.g., "2020-W03")
   year <- as.numeric(substr(yearweek, 1, 4))
