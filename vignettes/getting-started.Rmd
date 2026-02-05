@@ -30,11 +30,11 @@ library(ervissanalyse)
 
 ### Basic usage
 
-Use `get_erviss_positivity()` to fetch positivity data:
+Use `get_sentineltests_positivity()` to fetch positivity data:
 
 ```{r get-positivity, eval=FALSE}
 # Get SARS-CoV-2 positivity data for specific countries
-data <- get_erviss_positivity(
+data <- get_sentineltests_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-12-31"),
   pathogen = "SARS-CoV-2",
@@ -51,7 +51,7 @@ str(data)
 For reproducible analyses, you can fetch data from a specific snapshot:
 
 ```{r get-positivity-snapshot, eval=FALSE}
-data <- get_erviss_positivity(
+data <- get_sentineltests_positivity(
   date_min = as.Date("2023-01-01"),
   date_max = as.Date("2023-12-31"),
   pathogen = "Influenza",
@@ -85,26 +85,25 @@ data <- get_erviss_variants(
 
 ## Analyzing the Data
 
-Once you have retrieved the data, you can analyze it with your preferred tools:
+The data is returned as a `data.table`, which you can analyze with data.table syntax:
 
 ```{r analyze-data, eval=FALSE}
-library(dplyr)
-
-# Get positivity data
-data <- get_erviss_positivity(
+# Get positivity data (returns a data.table)
+data <- get_sentineltests_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-06-30"),
   pathogen = "SARS-CoV-2"
 )
 
 # Calculate summary statistics by country
-data %>%
-  group_by(countryname) %>%
-  summarise(
+data[,
+  .(
     mean_positivity = mean(value, na.rm = TRUE),
     max_positivity = max(value, na.rm = TRUE),
-    n_weeks = n()
-  )
+    n_weeks = .N
+  ),
+  by = countryname
+]
 ```
 
 ## Visualization (Optional)
@@ -115,7 +114,7 @@ The package provides optional visualization functions for quick exploration.
 
 ```{r plot-data, eval=FALSE}
 # Get data first
-data <- get_erviss_positivity(
+data <- get_sentineltests_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-06-30"),
   pathogen = "SARS-CoV-2",
@@ -156,7 +155,7 @@ You can also create your own visualizations:
 ```{r custom-plot, eval=FALSE}
 library(ggplot2)
 
-data <- get_erviss_positivity(
+data <- get_sentineltests_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-06-30"),
   pathogen = "SARS-CoV-2"
@@ -179,11 +178,11 @@ You can retrieve the data URLs directly if you prefer to download files manually
 
 ```{r urls}
 # Latest data URLs
-get_erviss_positivity_url()
+get_sentineltests_positivity_url()
 get_erviss_variants_url()
 
 # Snapshot URLs
-get_erviss_positivity_url(
+get_sentineltests_positivity_url(
   use_snapshot = TRUE,
   snapshot_date = as.Date("2023-11-24")
 )
@@ -199,7 +198,6 @@ Here's a complete workflow for analyzing variant data:
 
 ```{r complete-example, eval=FALSE}
 library(ervissanalyse)
-library(dplyr)
 
 # 1. Define parameters
 countries <- c("France", "Germany", "Italy", "Spain", "Belgium")
@@ -219,12 +217,10 @@ cat("Number of observations:", nrow(variant_data), "\n")
 cat("Countries:", unique(variant_data$countryname), "\n")
 cat("Variants:", unique(variant_data$variant), "\n")
 
-# 4. Find the dominant variants
-dominant <- variant_data %>%
-  group_by(variant) %>%
-  summarise(mean_proportion = mean(value)) %>%
-  arrange(desc(mean_proportion)) %>%
-  head(5)
+# 4. Find the dominant variants (data.table syntax)
+dominant <- variant_data[, .(mean_proportion = mean(value)), by = variant][
+  order(-mean_proportion)
+][1:5]
 
 print(dominant)
 

@@ -7,8 +7,8 @@
 plot_erviss_positivity(data, date_breaks = "2 weeks", date_format = "\%b \%Y")
 }
 \arguments{
-\item{data}{A data frame containing positivity data, typically output from
-\code{\link{get_erviss_positivity}}. Must contain columns: date, value,
+\item{data}{A data.table or data.frame containing positivity data, typically output from
+\code{\link{get_sentineltests_positivity}}. Must contain columns: date, value,
 pathogen, countryname.}
 
 \item{date_breaks}{A string specifying the date breaks for the x-axis
@@ -26,7 +26,7 @@ and colored by pathogen. The plot title displays mean, min and max positivity va
 }
 \examples{
 \dontrun{
-data <- get_erviss_positivity(
+data <- get_sentineltests_positivity(
   date_min = as.Date("2024-01-01"),
   date_max = as.Date("2024-06-30"),
   pathogen = "SARS-CoV-2"

@@ -7,7 +7,7 @@
 plot_erviss_variants(data, date_breaks = "1 month", date_format = "\%b \%Y")
 }
 \arguments{
-\item{data}{A data frame containing variant data, typically output from
+\item{data}{A data.table or data.frame containing variant data, typically output from
 \code{\link{get_erviss_variants}}. Must contain columns: date, value,
 variant, countryname.}
 

@@ -41,7 +41,7 @@ fetches the latest data. Ignored if csv_file is provided.}
 Required if use_snapshot = TRUE and csv_file is NULL.}
 }
 \value{
-A data frame containing the filtered variant data with columns:
+A data.table containing the filtered variant data with columns:
 date, value, variant, countryname, indicator, and other ERVISS fields.
 }
 \description{

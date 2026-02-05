@@ -47,7 +47,7 @@ A ggplot2 object showing positivity over time by country and pathogen
 }
 \description{
 Convenience function that fetches and plots ERVISS positivity data in one step.
-For more control, use \code{\link{get_erviss_positivity}} followed by
+For more control, use \code{\link{get_sentineltests_positivity}} followed by
 \code{\link{plot_erviss_positivity}}.
 }
 \examples{

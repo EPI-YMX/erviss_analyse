@@ -16,14 +16,14 @@
 #' @param snapshot_date Date of the snapshot to retrieve.
 #'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
-#' @return A data frame containing the filtered positivity data with columns:
+#' @return A data.table containing the filtered positivity data with columns:
 #'   date, value, pathogen, countryname, and other ERVISS fields.
 #'
 #' @export
 #' @examples
 #' \dontrun{
 #' # Get latest SARS-CoV-2 positivity data for France
-#' data <- get_erviss_positivity(
+#' data <- get_sentineltests_positivity(
 #'   date_min = as.Date("2024-01-01"),
 #'   date_max = as.Date("2024-12-31"),
 #'   pathogen = "SARS-CoV-2",
@@ -31,14 +31,14 @@
 #' )
 #'
 #' # Get historical data from a specific snapshot
-#' data <- get_erviss_positivity(
+#' data <- get_sentineltests_positivity(
 #'   date_min = as.Date("2023-01-01"),
 #'   date_max = as.Date("2023-12-31"),
 #'   use_snapshot = TRUE,
 #'   snapshot_date = as.Date("2024-02-23")
 #' )
 #' }
-get_erviss_positivity <- function(
+get_sentineltests_positivity <- function(
   csv_file = NULL,
   date_min,
   date_max,
@@ -48,28 +48,25 @@ get_erviss_positivity <- function(
   snapshot_date = NULL
 ) {
   if (is.null(csv_file)) {
-    csv_file <- get_erviss_positivity_url(use_snapshot, snapshot_date)
+    csv_file <- get_sentineltests_positivity_url(use_snapshot, snapshot_date)
   }
   assert_file_or_url(csv_file, "csv_file")
   assert_date(date_min, "date_min")
   assert_date(date_max, "date_max")
 
-  data <- readr::read_csv(csv_file) %>%
-    dplyr::mutate(date = yearweek_to_date(yearweek))
+  dt <- data.table::fread(csv_file)
+  dt[, date := yearweek_to_date(yearweek)]
 
   if (any(pathogen != "")) {
-    data <- data %>%
-      dplyr::filter(pathogen %in% .env$pathogen)
+    pathogen_filter <- pathogen
+    dt <- dt[pathogen %chin% pathogen_filter]
   }
 
   if (any(countries != "")) {
-    data <- data %>%
-      dplyr::filter(countryname %in% countries)
+    dt <- dt[countryname %chin% countries]
   }
 
-  data %>%
-    dplyr::filter(date >= date_min & date <= date_max) %>%
-    dplyr::filter(indicator == "positivity")
+  dt[date >= date_min & date <= date_max & indicator == "positivity"]
 }
 
 #' Plot ERVISS positivity data
@@ -77,8 +74,8 @@ get_erviss_positivity <- function(
 #' Creates a ggplot2 visualization of positivity data, with facets by country
 #' and colored by pathogen. The plot title displays mean, min and max positivity values.
 #'
-#' @param data A data frame containing positivity data, typically output from
-#'   \code{\link{get_erviss_positivity}}. Must contain columns: date, value,
+#' @param data A data.table or data.frame containing positivity data, typically output from
+#'   \code{\link{get_sentineltests_positivity}}. Must contain columns: date, value,
 #'   pathogen, countryname.
 #' @param date_breaks A string specifying the date breaks for the x-axis
 #'   (e.g., "1 month", "2 weeks")
@@ -90,7 +87,7 @@ get_erviss_positivity <- function(
 #' @export
 #' @examples
 #' \dontrun{
-#' data <- get_erviss_positivity(
+#' data <- get_sentineltests_positivity(
 #'   date_min = as.Date("2024-01-01"),
 #'   date_max = as.Date("2024-06-30"),
 #'   pathogen = "SARS-CoV-2"
@@ -127,17 +124,16 @@ plot_erviss_positivity <- function(
 #' Quick plot of ERVISS positivity data
 #'
 #' Convenience function that fetches and plots ERVISS positivity data in one step.
-#' For more control, use \code{\link{get_erviss_positivity}} followed by
+#' For more control, use \code{\link{get_sentineltests_positivity}} followed by
 #' \code{\link{plot_erviss_positivity}}.
 #'
-#' @inheritParams get_erviss_positivity
+#' @inheritParams get_sentineltests_positivity
 #' @inheritParams plot_erviss_positivity
 #'
 #' @return A ggplot2 object showing positivity over time by country and pathogen
 #'
 #' @import ggplot2
-#' @import dplyr
-#' @import readr
+#' @import data.table
 #' @export
 #' @examples
 #' \dontrun{
@@ -160,7 +156,7 @@ quick_plot_erviss_positivity <- function(
   use_snapshot = FALSE,
   snapshot_date = NULL
 ) {
-  data <- get_erviss_positivity(
+  data <- get_sentineltests_positivity(
     csv_file,
     date_min,
     date_max,

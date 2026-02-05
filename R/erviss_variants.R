@@ -18,7 +18,7 @@
 #' @param snapshot_date Date of the snapshot to retrieve.
 #'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
-#' @return A data frame containing the filtered variant data with columns:
+#' @return A data.table containing the filtered variant data with columns:
 #'   date, value, variant, countryname, indicator, and other ERVISS fields.
 #'
 #' @export
@@ -59,23 +59,20 @@ get_erviss_variants <- function(
 
   match.arg(indicator, c("proportion", "detections"))
 
-  data <- readr::read_csv(csv_file) %>%
-    dplyr::mutate(date = yearweek_to_date(yearweek))
+  dt <- data.table::fread(csv_file)
+  dt[, date := yearweek_to_date(yearweek)]
 
   if (any(variant != "")) {
-    data <- data %>%
-      dplyr::filter(variant %in% .env$variant)
+    variant_filter <- variant
+    dt <- dt[variant %chin% variant_filter]
   }
 
   if (any(countries != "")) {
-    data <- data %>%
-      dplyr::filter(countryname %in% countries)
+    dt <- dt[countryname %chin% countries]
   }
 
-  data %>%
-    dplyr::filter(date >= date_min & date <= date_max) %>%
-    dplyr::filter(indicator == .env$indicator) %>%
-    dplyr::filter(value >= min_value)
+  indicator_filter <- indicator
+  dt[date >= date_min & date <= date_max & indicator == indicator_filter & value >= min_value]
 }
 
 #' Plot ERVISS variants data
@@ -83,7 +80,7 @@ get_erviss_variants <- function(
 #' Creates a ggplot2 visualization of variant data, with facets by country
 #' and colored by variant. The y-axis shows percentage of all variants.
 #'
-#' @param data A data frame containing variant data, typically output from
+#' @param data A data.table or data.frame containing variant data, typically output from
 #'   \code{\link{get_erviss_variants}}. Must contain columns: date, value,
 #'   variant, countryname.
 #' @param date_breaks A string specifying the date breaks for the x-axis
@@ -132,8 +129,7 @@ plot_erviss_variants <- function(
 #' @return A ggplot2 object showing variant proportions over time by country
 #'
 #' @import ggplot2
-#' @import dplyr
-#' @import readr
+#' @import data.table
 #' @export
 #' @examples
 #' \dontrun{
