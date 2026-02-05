@@ -42,8 +42,8 @@ summary(variant_data)
 The package fetches data directly from the [EU-ECDC Respiratory Viruses Weekly Data](https://github.com/EU-ECDC/Respiratory_viruses_weekly_data) repository.
 
 Two data types are available:
-- **Positivity**: Test positivity rates by pathogen and country
-- **Variants**: SARS-CoV-2 variant proportions by country
+- **Positivity**: Test positivity rates by pathogen and country (from `sentinelTestsDetectionsPositivity.csv`)
+- **Variants**: SARS-CoV-2 variant proportions by country (from `variants.csv`)
 
 ### Latest Data vs Snapshots
 

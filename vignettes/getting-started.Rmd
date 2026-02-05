@@ -22,11 +22,19 @@ The `ervissanalyse` package makes it easy to retrieve ERVISS (European Respirato
 Virus Surveillance Summary) data from the EU-ECDC. It provides functions to fetch
 and filter data, plus optional visualization tools.
 
+The package works with two data sources from the
+[EU-ECDC Respiratory Viruses Weekly Data](https://github.com/EU-ECDC/Respiratory_viruses_weekly_data) repository:
+
+- **Positivity data** (`sentinelTestsDetectionsPositivity.csv`): Test positivity rates by pathogen and country
+- **Variants data** (`variants.csv`): SARS-CoV-2 variant proportions by country
+
 ```{r setup}
 library(ervissanalyse)
 ```
 
 ## Retrieving Positivity Data
+
+Positivity data comes from the `sentinelTestsDetectionsPositivity.csv` file.
 
 ### Basic usage
 
@@ -61,6 +69,8 @@ data <- get_sentineltests_positivity(
 ```
 
 ## Retrieving Variant Data
+
+Variant data comes from the `variants.csv` file.
 
 ### Basic usage
 
