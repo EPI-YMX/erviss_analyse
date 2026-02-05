@@ -64,6 +64,22 @@ get_erviss_positivity_url <- function(use_snapshot = FALSE, snapshot_date = NULL
 }
 
 #' @noRd
+theme_erviss <- function() {
+  theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.5),
+      strip.placement = "outside",
+      legend.position = "bottom",
+      panel.spacing = unit(1, "cm"),
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 14),
+      strip.text = element_text(size = 14)
+    )
+}
+
+#' @noRd
 assert_file_or_url <- function(path, arg_name = "csv_file") {
   if (!file.exists(path) && !grepl("^https?://", path)) {
     stop(sprintf("'%s' must be an existing file or a valid URL", arg_name))

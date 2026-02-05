@@ -111,29 +111,15 @@ plot_erviss_positivity <- function(
     xlab("") +
     ylab("Positivity") +
     facet_wrap(~countryname, scales = "free_x", ncol = 3) +
-    theme_minimal() +
     scale_x_date(date_breaks = date_breaks, date_labels = date_format) +
     scale_colour_viridis_d(name = "Pathogen") +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.5),
-      strip.placement = "outside",
-      legend.position = "bottom",
-      panel.spacing = unit(1, "cm"),
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14),
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 14),
-      strip.text = element_text(size = 14)
-    ) +
+    theme_erviss() +
     labs(
-      title = paste0(
-        "Mean positivity: ",
+      title = sprintf(
+        "Mean positivity: %.2f (Min %.2f - Max %.2f)",
         mean_positivity,
-        " (",
         min_positivity,
-        " - ",
-        max_positivity,
-        ")"
+        max_positivity
       )
     )
 }

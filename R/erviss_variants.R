@@ -113,22 +113,11 @@ plot_erviss_variants <- function(
     xlab("") +
     ylab("% of all variants") +
     facet_wrap(~countryname, scales = "free_x", ncol = 3) +
-    theme_minimal() +
     scale_x_date(date_breaks = date_breaks, date_labels = date_format) +
     scale_colour_viridis_d(name = "Variant") +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 25)) +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.5),
-      strip.placement = "outside",
-      legend.position = "bottom",
-      panel.spacing = unit(1, "cm"),
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14),
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 14),
-      strip.text = element_text(size = 14),
-      panel.grid = element_blank()
-    )
+    theme_erviss() +
+    theme(panel.grid = element_blank())
 }
 
 #' Quick plot of ERVISS variants data
