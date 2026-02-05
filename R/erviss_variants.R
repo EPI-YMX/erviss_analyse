@@ -3,36 +3,46 @@
 #' Filters and cleans variant data from an ERVISS CSV file for a specified
 #' date range, variant(s), study site(s), and indicator type.
 #'
-#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
+#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
 #' @param variant_to_study Character vector of variant names to filter.
 #'   Use "" (default) to include all variants.
-#' @param studysites_variants Character vector of country names to filter.
+#' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
 #' @param minimal_value Minimum value threshold to include in the results (default: 0)
 #' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
+#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+#'   uses the latest data. Ignored if csv_file is provided.
+#' @param snapshot_date Date of the snapshot to retrieve.
+#'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
 #' @return A data frame containing the filtered variant data with columns:
 #'   date, value, variant, countryname, indicator, and other ERVISS fields.
 #'
 #' @export
 clean_erviss_variants_for_a_given_period <- function(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   variant_to_study = "",
-  studysites_variants = "",
+  countries = "",
   minimal_value = 0,
-  indicator_to_study = "proportion"
+  indicator_to_study = "proportion",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 ) {
-  assert_file_or_url(csv_variants_file, "csv_variants_file")
+  if (is.null(csv_file)) {
+    csv_file <- get_erviss_variants_url(use_snapshot, snapshot_date)
+  }
+  assert_file_or_url(csv_file, "csv_file")
   assert_date(date_min, "date_min")
   assert_date(date_max, "date_max")
 
   match.arg(indicator_to_study, c("proportion", "detections"))
   csv_variants <- readr::read_csv(
-    csv_variants_file
+    csv_file
   ) %>%
     dplyr::mutate(
       date = yearweek_to_date(yearweek)
@@ -45,10 +55,10 @@ clean_erviss_variants_for_a_given_period <- function(
       )
   }
 
-  if (any(studysites_variants != "")) {
+  if (any(countries != "")) {
     csv_variants <- csv_variants %>%
       dplyr::filter(
-        countryname %in% studysites_variants
+        countryname %in% countries
       )
   }
   csv_variants_filtered <- csv_variants %>%
@@ -81,7 +91,11 @@ clean_erviss_variants_for_a_given_period <- function(
 #' @return A ggplot2 object
 #'
 #' @export
-plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_breaks, date_format) {
+plot_erviss_variants_for_a_given_period <- function(
+  csv_variants_filtered,
+  date_breaks,
+  date_format
+) {
   ggplot(csv_variants_filtered, aes(x = date, y = value, color = variant)) +
     geom_line() +
     xlab("") +
@@ -112,12 +126,13 @@ plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_
 #' \code{\link{clean_erviss_variants_for_a_given_period}} and
 #' \code{\link{plot_erviss_variants_for_a_given_period}}.
 #'
-#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
+#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
 #' @param variant_to_study Character vector of variant names to filter.
 #'   Use "" (default) to include all variants.
-#' @param studysites_variants Character vector of country names to filter.
+#' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
 #' @param minimal_value Minimum value threshold to include in the results (default: 0)
 #' @param indicator_to_study Type of indicator: "proportion" (default) or "detections"
@@ -125,6 +140,10 @@ plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_
 #'   (e.g., "1 month", "2 weeks")
 #' @param date_format A string specifying the date format for x-axis labels
 #'   (e.g., `"%b %Y"` for "Jan 2024")
+#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+#'   uses the latest data. Ignored if csv_file is provided.
+#' @param snapshot_date Date of the snapshot to retrieve.
+#'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
 #' @return A ggplot2 object showing variant proportions over time by country
 #'
@@ -134,36 +153,50 @@ plot_erviss_variants_for_a_given_period <- function(csv_variants_filtered, date_
 #' @export
 #' @examples
 #' \dontrun{
+#' # Using latest data
 #' show_variants_for_a_given_period(
-#'   csv_variants_file = "https://raw.githubusercontent.com/EU-ECDC/Respiratory_viruses_weekly_data/refs/heads/main/data/snapshots/2025-11-21_variants.csv",
 #'   date_min = as.Date("2024-10-01"),
 #'   date_max = as.Date("2025-09-30"),
-#'   variant_to_study = c("XFG", "LP.8.1", "BA.2.86"),
-#'   minimal_value = 10,
-#'   studysites_variants = c("Belgium", "Denmark", "Italy", "Norway", "Portugal", "Spain", "Sweden"),
-#'   date_breaks = "1 month",
-#'   date_format = "%b %Y"
+#'   variant_to_study = c("XFG", "LP.8.1"),
+#'   date_breaks = "1 month"
+#' )
+#'
+#' # Using a snapshot
+#' show_variants_for_a_given_period(
+#'   date_min = as.Date("2024-10-01"),
+#'   date_max = as.Date("2025-09-30"),
+#'   use_snapshot = TRUE,
+#'   snapshot_date = as.Date("2025-11-21"),
+#'   date_breaks = "1 month"
 #' )
 #' }
 show_variants_for_a_given_period <- function(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   variant_to_study = "",
-  studysites_variants = "",
+  countries = "",
   minimal_value = 0,
   indicator_to_study = "proportion",
   date_breaks,
-  date_format = "%b %Y"
+  date_format = "%b %Y",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 ) {
   csv_variants_filtered <- clean_erviss_variants_for_a_given_period(
-    csv_variants_file,
+    csv_file,
     date_min,
     date_max,
     variant_to_study,
-    studysites_variants,
+    countries,
     minimal_value,
-    indicator_to_study
+    indicator_to_study,
+    use_snapshot,
+    snapshot_date
   )
-  plot_erviss_variants_for_a_given_period(csv_variants_filtered, date_breaks, date_format)
+  plot_erviss_variants_for_a_given_period(
+    csv_variants_filtered,
+    date_breaks,
+    date_format
+  )
 }

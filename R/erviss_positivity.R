@@ -3,31 +3,41 @@
 #' Filters and cleans positivity data from an ERVISS CSV file for a specified
 #' date range, pathogen(s), and study site(s).
 #'
-#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
+#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
 #' @param pathogen_to_study Character vector of pathogen names to filter.
 #'   Use "" (default) to include all pathogens.
-#' @param studysites_variants Character vector of country names to filter.
+#' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
+#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+#'   uses the latest data. Ignored if csv_file is provided.
+#' @param snapshot_date Date of the snapshot to retrieve.
+#'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
 #' @return A data frame containing the filtered positivity data with columns:
 #'   date, value, pathogen, countryname, and other ERVISS fields.
 #'
 #' @export
 clean_erviss_positivity_for_a_given_period <- function(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   pathogen_to_study = "",
-  studysites_variants = ""
+  countries = "",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 ) {
-  assert_file_or_url(csv_variants_file, "csv_variants_file")
+  if (is.null(csv_file)) {
+    csv_file <- get_erviss_positivity_url(use_snapshot, snapshot_date)
+  }
+  assert_file_or_url(csv_file, "csv_file")
   assert_date(date_min, "date_min")
   assert_date(date_max, "date_max")
 
   csv_variants <- readr::read_csv(
-    csv_variants_file
+    csv_file
   ) %>%
     dplyr::mutate(
       date = yearweek_to_date(yearweek)
@@ -40,10 +50,10 @@ clean_erviss_positivity_for_a_given_period <- function(
       )
   }
 
-  if (any(studysites_variants != "")) {
+  if (any(countries != "")) {
     csv_variants <- csv_variants %>%
       dplyr::filter(
-        countryname %in% studysites_variants
+        countryname %in% countries
       )
   }
 
@@ -93,7 +103,17 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
       legend.title = element_text(size = 14),
       strip.text = element_text(size = 14)
     ) +
-    labs(title = paste0("Mean positivity: ", mean_positivity, " (", min_positivity, " - ", max_positivity, ")"))
+    labs(
+      title = paste0(
+        "Mean positivity: ",
+        mean_positivity,
+        " (",
+        min_positivity,
+        " - ",
+        max_positivity,
+        ")"
+      )
+    )
 }
 
 #' Show positivity for a given period
@@ -103,13 +123,18 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
 #' \code{\link{clean_erviss_positivity_for_a_given_period}} and
 #' \code{\link{plot_erviss_positivity_for_a_given_period}}.
 #'
-#' @param csv_variants_file Path to the CSV file or URL containing the ERVISS data
+#' @param csv_file Path to the CSV file or URL containing the ERVISS data.
+#'   If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.
 #' @param date_min Start date of the period (Date object)
 #' @param date_max End date of the period (Date object)
 #' @param pathogen_to_study Character vector of pathogen names to filter.
 #'   Use "" (default) to include all pathogens.
-#' @param studysites_variants Character vector of country names to filter.
+#' @param countries Character vector of country names to filter.
 #'   Use "" (default) to include all countries.
+#' @param use_snapshot Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+#'   uses the latest data. Ignored if csv_file is provided.
+#' @param snapshot_date Date of the snapshot to retrieve.
+#'   Required if use_snapshot = TRUE and csv_file is NULL.
 #'
 #' @return A ggplot2 object showing positivity over time by country and pathogen
 #'
@@ -117,21 +142,41 @@ plot_erviss_positivity_for_a_given_period <- function(csv_variants_filtered) {
 #' @import dplyr
 #' @import readr
 #' @export
+#' @examples
+#' \dontrun{
+#' # Using latest data
+#' show_positivity_for_a_given_period(
+#'   date_min = as.Date("2024-01-01"),
+#'   date_max = as.Date("2024-12-31"),
+#'   pathogen_to_study = "SARS-CoV-2"
+#' )
+#'
+#' # Using a snapshot
+#' show_positivity_for_a_given_period(
+#'   date_min = as.Date("2023-01-01"),
+#'   date_max = as.Date("2023-12-31"),
+#'   use_snapshot = TRUE,
+#'   snapshot_date = as.Date("2023-11-24")
+#' )
+#' }
 show_positivity_for_a_given_period <- function(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   pathogen_to_study = "",
-  studysites_variants = ""
+  countries = "",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 ) {
   csv_variants_filtered <- clean_erviss_positivity_for_a_given_period(
-    csv_variants_file,
+    csv_file,
     date_min,
     date_max,
     pathogen_to_study,
-    studysites_variants
+    countries,
+    use_snapshot,
+    snapshot_date
   )
-  
+
   plot_erviss_positivity_for_a_given_period(csv_variants_filtered)
 }
-

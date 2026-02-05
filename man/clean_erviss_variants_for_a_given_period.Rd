@@ -5,17 +5,20 @@
 \title{Clean ERVISS variants data for a given period}
 \usage{
 clean_erviss_variants_for_a_given_period(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   variant_to_study = "",
-  studysites_variants = "",
+  countries = "",
   minimal_value = 0,
-  indicator_to_study = "proportion"
+  indicator_to_study = "proportion",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 )
 }
 \arguments{
-\item{csv_variants_file}{Path to the CSV file or URL containing the ERVISS data}
+\item{csv_file}{Path to the CSV file or URL containing the ERVISS data.
+If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.}
 
 \item{date_min}{Start date of the period (Date object)}
 
@@ -24,12 +27,18 @@ clean_erviss_variants_for_a_given_period(
 \item{variant_to_study}{Character vector of variant names to filter.
 Use "" (default) to include all variants.}
 
-\item{studysites_variants}{Character vector of country names to filter.
+\item{countries}{Character vector of country names to filter.
 Use "" (default) to include all countries.}
 
 \item{minimal_value}{Minimum value threshold to include in the results (default: 0)}
 
 \item{indicator_to_study}{Type of indicator: "proportion" (default) or "detections"}
+
+\item{use_snapshot}{Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+uses the latest data. Ignored if csv_file is provided.}
+
+\item{snapshot_date}{Date of the snapshot to retrieve.
+Required if use_snapshot = TRUE and csv_file is NULL.}
 }
 \value{
 A data frame containing the filtered variant data with columns:

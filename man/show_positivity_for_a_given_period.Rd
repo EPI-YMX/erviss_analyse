@@ -5,15 +5,18 @@
 \title{Show positivity for a given period}
 \usage{
 show_positivity_for_a_given_period(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   pathogen_to_study = "",
-  studysites_variants = ""
+  countries = "",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 )
 }
 \arguments{
-\item{csv_variants_file}{Path to the CSV file or URL containing the ERVISS data}
+\item{csv_file}{Path to the CSV file or URL containing the ERVISS data.
+If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.}
 
 \item{date_min}{Start date of the period (Date object)}
 
@@ -22,8 +25,14 @@ show_positivity_for_a_given_period(
 \item{pathogen_to_study}{Character vector of pathogen names to filter.
 Use "" (default) to include all pathogens.}
 
-\item{studysites_variants}{Character vector of country names to filter.
+\item{countries}{Character vector of country names to filter.
 Use "" (default) to include all countries.}
+
+\item{use_snapshot}{Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+uses the latest data. Ignored if csv_file is provided.}
+
+\item{snapshot_date}{Date of the snapshot to retrieve.
+Required if use_snapshot = TRUE and csv_file is NULL.}
 }
 \value{
 A ggplot2 object showing positivity over time by country and pathogen
@@ -33,4 +42,22 @@ Cleans and plots ERVISS positivity data for a specified period.
 This is a convenience function that combines
 \code{\link{clean_erviss_positivity_for_a_given_period}} and
 \code{\link{plot_erviss_positivity_for_a_given_period}}.
+}
+\examples{
+\dontrun{
+# Using latest data
+show_positivity_for_a_given_period(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-12-31"),
+  pathogen_to_study = "SARS-CoV-2"
+)
+
+# Using a snapshot
+show_positivity_for_a_given_period(
+  date_min = as.Date("2023-01-01"),
+  date_max = as.Date("2023-12-31"),
+  use_snapshot = TRUE,
+  snapshot_date = as.Date("2023-11-24")
+)
+}
 }

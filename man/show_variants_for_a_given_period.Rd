@@ -5,19 +5,22 @@
 \title{Show variants for a given period}
 \usage{
 show_variants_for_a_given_period(
-  csv_variants_file,
+  csv_file = NULL,
   date_min,
   date_max,
   variant_to_study = "",
-  studysites_variants = "",
+  countries = "",
   minimal_value = 0,
   indicator_to_study = "proportion",
   date_breaks,
-  date_format = "\%b \%Y"
+  date_format = "\%b \%Y",
+  use_snapshot = FALSE,
+  snapshot_date = NULL
 )
 }
 \arguments{
-\item{csv_variants_file}{Path to the CSV file or URL containing the ERVISS data}
+\item{csv_file}{Path to the CSV file or URL containing the ERVISS data.
+If NULL (default), the URL is built automatically using use_snapshot and snapshot_date.}
 
 \item{date_min}{Start date of the period (Date object)}
 
@@ -26,7 +29,7 @@ show_variants_for_a_given_period(
 \item{variant_to_study}{Character vector of variant names to filter.
 Use "" (default) to include all variants.}
 
-\item{studysites_variants}{Character vector of country names to filter.
+\item{countries}{Character vector of country names to filter.
 Use "" (default) to include all countries.}
 
 \item{minimal_value}{Minimum value threshold to include in the results (default: 0)}
@@ -38,6 +41,12 @@ Use "" (default) to include all countries.}
 
 \item{date_format}{A string specifying the date format for x-axis labels
 (e.g., \code{"\%b \%Y"} for "Jan 2024")}
+
+\item{use_snapshot}{Logical. If TRUE, uses a snapshot URL; if FALSE (default),
+uses the latest data. Ignored if csv_file is provided.}
+
+\item{snapshot_date}{Date of the snapshot to retrieve.
+Required if use_snapshot = TRUE and csv_file is NULL.}
 }
 \value{
 A ggplot2 object showing variant proportions over time by country
@@ -50,15 +59,21 @@ This is a convenience function that combines
 }
 \examples{
 \dontrun{
+# Using latest data
 show_variants_for_a_given_period(
-  csv_variants_file = "https://raw.githubusercontent.com/EU-ECDC/Respiratory_viruses_weekly_data/refs/heads/main/data/snapshots/2025-11-21_variants.csv",
   date_min = as.Date("2024-10-01"),
   date_max = as.Date("2025-09-30"),
-  variant_to_study = c("XFG", "LP.8.1", "BA.2.86"),
-  minimal_value = 10,
-  studysites_variants = c("Belgium", "Denmark", "Italy", "Norway", "Portugal", "Spain", "Sweden"),
-  date_breaks = "1 month",
-  date_format = "\%b \%Y"
+  variant_to_study = c("XFG", "LP.8.1"),
+  date_breaks = "1 month"
+)
+
+# Using a snapshot
+show_variants_for_a_given_period(
+  date_min = as.Date("2024-10-01"),
+  date_max = as.Date("2025-09-30"),
+  use_snapshot = TRUE,
+  snapshot_date = as.Date("2025-11-21"),
+  date_breaks = "1 month"
 )
 }
 }

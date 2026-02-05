@@ -1,0 +1,205 @@
+---
+title: "Getting Started with ervissanalyse"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with ervissanalyse}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 6
+)
+```
+
+## Introduction
+The `ervissanalyse` package provides tools to analyze and visualize ERVISS
+(European Respiratory Virus Surveillance Summary) data from the EU-ECDC.
+
+```{r setup}
+library(ervissanalyse)
+```
+
+## Visualizing Positivity Rates
+
+### Using the latest data
+
+The simplest way to visualize positivity rates is to use the `show_positivity_for_a_given_period()` function with the default settings (latest data):
+
+```{r positivity-latest, eval=FALSE}
+show_positivity_for_a_given_period(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-12-31"),
+  pathogen_to_study = "SARS-CoV-2",
+  countries = c("France", "Germany", "Italy", "Spain")
+)
+```
+
+### Using a historical snapshot
+
+For reproducible analyses, you can use a specific data snapshot:
+
+```{r positivity-snapshot, eval=FALSE}
+show_positivity_for_a_given_period(
+  date_min = as.Date("2023-01-01"),
+  date_max = as.Date("2023-12-31"),
+  pathogen_to_study = c("SARS-CoV-2", "Influenza"),
+  use_snapshot = TRUE,
+  snapshot_date = as.Date("2024-02-23")
+)
+```
+
+## Visualizing Variant Proportions
+
+### Basic variant plot
+
+```{r variants-basic, eval=FALSE}
+show_variants_for_a_given_period(
+  date_min = as.Date("2024-06-01"),
+  date_max = as.Date("2024-12-31"),
+  variant_to_study = c("XFG", "LP.8.1", "BA.2.86"),
+  countries = c("Belgium", "Denmark", "France"),
+  date_breaks = "1 month",
+  date_format = "%b %Y"
+)
+```
+
+### Filtering by minimum proportion
+
+You can filter out variants below a certain threshold:
+
+```{r variants-filtered, eval=FALSE}
+show_variants_for_a_given_period(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-12-31"),
+  minimal_value = 5, # Only show variants with >= 5% proportion
+  date_breaks = "2 weeks"
+)
+```
+
+## Working with the Data Directly
+
+### Cleaning data for custom analysis
+
+If you want to analyze the data yourself, use the `clean_*` functions:
+
+```{r clean-data, eval=FALSE}
+# Get cleaned positivity data
+positivity_data <- clean_erviss_positivity_for_a_given_period(
+  date_min = as.Date("2024-01-01"),
+  date_max = as.Date("2024-06-30"),
+  pathogen_to_study = "SARS-CoV-2"
+)
+
+# Explore the data
+head(positivity_data)
+str(positivity_data)
+
+# Calculate summary statistics
+library(dplyr)
+positivity_data %>%
+  group_by(countryname) %>%
+  summarise(
+    mean_positivity = mean(value, na.rm = TRUE),
+    max_positivity = max(value, na.rm = TRUE)
+  )
+```
+
+### Custom plotting
+
+After cleaning, you can use the plot functions or create your own visualizations:
+
+```{r custom-plot, eval=FALSE}
+# Use the package's plot function
+plot_erviss_positivity_for_a_given_period(positivity_data)
+
+# Or create your own with ggplot2
+library(ggplot2)
+ggplot(positivity_data, aes(x = date, y = value, color = countryname)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "SARS-CoV-2 Positivity Rates",
+    x = "Date",
+    y = "Positivity (%)",
+    color = "Country"
+  ) +
+  theme_minimal()
+```
+
+## URL Helpers
+
+You can retrieve the data URLs directly:
+
+```{r urls}
+# Latest data URLs
+get_erviss_positivity_url()
+get_erviss_variants_url()
+
+# Snapshot URLs
+get_erviss_positivity_url(
+  use_snapshot = TRUE,
+  snapshot_date = as.Date("2023-11-24")
+)
+get_erviss_variants_url(
+  use_snapshot = TRUE,
+  snapshot_date = as.Date("2023-11-24")
+)
+```
+
+## Complete Example
+
+Here's a complete workflow for analyzing variant data:
+
+```{r complete-example, eval=FALSE}
+library(ervissanalyse)
+library(dplyr)
+
+# 1. Define parameters
+countries <- c("France", "Germany", "Italy", "Spain", "Belgium")
+start_date <- as.Date("2024-06-01")
+end_date <- as.Date("2024-12-31")
+
+# 2. Get and clean data
+variant_data <- clean_erviss_variants_for_a_given_period(
+  date_min = start_date,
+  date_max = end_date,
+  countries = countries,
+  minimal_value = 1
+)
+
+# 3. Explore the data
+cat("Number of observations:", nrow(variant_data), "\n")
+cat("Countries:", unique(variant_data$countryname), "\n")
+cat("Variants:", unique(variant_data$variant), "\n")
+
+# 4. Find the dominant variants
+dominant <- variant_data %>%
+  group_by(variant) %>%
+  summarise(mean_proportion = mean(value)) %>%
+  arrange(desc(mean_proportion)) %>%
+  head(5)
+
+print(dominant)
+
+# 5. Plot only the top variants
+top_variants <- dominant$variant
+
+show_variants_for_a_given_period(
+  date_min = start_date,
+  date_max = end_date,
+  variant_to_study = top_variants,
+  countries = countries,
+  date_breaks = "1 month",
+  minimal_value = 1
+)
+```
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
